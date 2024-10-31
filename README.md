@@ -1,4 +1,4 @@
-# zxcv
+# 2023011758 강경호
 zxcv
 import javax.swing.*;
 import java.awt.*;
