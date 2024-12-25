@@ -1,0 +1,100 @@
+import java.sql.*;
+import java.util.Scanner;
+
+public class LibraryManagementSystem {
+
+    private static Connection connect() throws SQLException {
+        return DriverManager.getConnection("jdbc:mysql://localhost:3306/library", "root", "password");
+    }
+
+    public static void searchBook(String searchTerm) {
+        String query = "SELECT * FROM books WHERE title LIKE ? OR author LIKE ?";
+        try (Connection conn = connect(); PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, "%" + searchTerm + "%");
+            stmt.setString(2, "%" + searchTerm + "%");
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                System.out.println("Book ID: " + rs.getInt("book_id"));
+                System.out.println("Title: " + rs.getString("title"));
+                System.out.println("Author: " + rs.getString("author"));
+                System.out.println("ISBN: " + rs.getString("isbn"));
+                System.out.println("Available Quantity: " + rs.getInt("available_quantity"));
+                System.out.println("---------------");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void borrowBook(int bookId, int studentId) {
+        String query = "UPDATE books SET available_quantity = available_quantity - 1 WHERE book_id = ?";
+        String loanQuery = "INSERT INTO loans (book_id, student_id, loan_date, is_returned) VALUES (?, ?, NOW(), false)";
+        try (Connection conn = connect(); PreparedStatement stmt = conn.prepareStatement(query); 
+             PreparedStatement loanStmt = conn.prepareStatement(loanQuery)) {
+            stmt.setInt(1, bookId);
+            stmt.executeUpdate();
+
+            loanStmt.setInt(1, bookId);
+            loanStmt.setInt(2, studentId);
+            loanStmt.executeUpdate();
+
+            System.out.println("Book borrowed successfully!");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void returnBook(int bookId, int studentId) {
+        String query = "UPDATE books SET available_quantity = available_quantity + 1 WHERE book_id = ?";
+        String returnQuery = "UPDATE loans SET return_date = NOW(), is_returned = true WHERE book_id = ? AND student_id = ? AND is_returned = false";
+        try (Connection conn = connect(); PreparedStatement stmt = conn.prepareStatement(query); 
+             PreparedStatement returnStmt = conn.prepareStatement(returnQuery)) {
+            stmt.setInt(1, bookId);
+            stmt.executeUpdate();
+
+            returnStmt.setInt(1, bookId);
+            returnStmt.setInt(2, studentId);
+            returnStmt.executeUpdate();
+
+            System.out.println("Book returned successfully!");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Welcome to the Library Management System");
+        System.out.println("1. Search Book");
+        System.out.println("2. Borrow Book");
+        System.out.println("3. Return Book");
+        System.out.print("Enter option: ");
+        int option = scanner.nextInt();
+
+        switch (option) {
+            case 1:
+                System.out.print("Enter search term (title/author): ");
+                String searchTerm = scanner.next();
+                searchBook(searchTerm);
+                break;
+            case 2:
+                System.out.print("Enter book ID to borrow: ");
+                int bookId = scanner.nextInt();
+                System.out.print("Enter student ID: ");
+                int studentId = scanner.nextInt();
+                borrowBook(bookId, studentId);
+                break;
+            case 3:
+                System.out.print("Enter book ID to return: ");
+                bookId = scanner.nextInt();
+                System.out.print("Enter student ID: ");
+                studentId = scanner.nextInt();
+                returnBook(bookId, studentId);
+                break;
+            default:
+                System.out.println("Invalid option!");
+        }
+
+        scanner.close();
+    }
+}
